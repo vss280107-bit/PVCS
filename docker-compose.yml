@@ -1,0 +1,42 @@
+version: '3.9'
+services:
+  db:
+    image: mysql:8.0
+    container_name: pf_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: promptflow
+      MYSQL_USER: pf_user
+      MYSQL_PASSWORD: pf_pass_2024
+    ports: ["3306:3306"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost"]
+      interval: 10s; timeout: 5s; retries: 5
+
+  backend:
+    build: ./backend
+    container_name: pf_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+mysqlconnector://pf_user:pf_pass_2024@db:3306/promptflow
+    ports: ["8000:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+    volumes: [./backend:/app]
+
+  frontend:
+    image: nginx:alpine
+    container_name: pf_frontend
+    restart: unless-stopped
+    ports: ["3000:80"]
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [backend]
+
+volumes:
+  mysql_data:

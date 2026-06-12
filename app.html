@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PromptFlow — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#070b14;--bg2:#0d1220;--surface:rgba(255,255,255,.04);--surface2:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+  --accent:#6366f1;--accent2:#8b5cf6;--accent3:#06b6d4;--gold:#f59e0b;
+  --danger:#f87171;--success:#34d399;--warn:#fbbf24;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
+  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+  --sidebar:260px;--radius:10px;--transition:.22s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:rgba(99,102,241,.4);border-radius:99px}
+
+.sidebar{
+  width:var(--sidebar);position:fixed;top:0;left:0;bottom:0;
+  background:rgba(13,18,32,.98);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:200;
+  transition:transform var(--transition);
+}
+.sidebar-top{padding:1.4rem 1.2rem 1rem;border-bottom:1px solid var(--border)}
+.sidebar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:1.2rem}
+.sidebar-logo-icon{
+  width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;box-shadow:0 6px 20px rgba(99,102,241,.4);flex-shrink:0;
+}
+.sidebar-logo-text{font-size:1.2rem;font-weight:800;letter-spacing:-.02em}
+.sidebar-user{display:flex;align-items:center;gap:10px}
+.user-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0;overflow:hidden;
+}
+.user-avatar img{width:100%;height:100%;object-fit:cover}
+.user-info{min-width:0}
+.user-name{font-size:.85rem;font-weight:700;truncate:ellipsis;white-space:nowrap;overflow:hidden}
+.user-role{font-size:.7rem;color:var(--text3)}
+
+.sidebar-nav{padding:.8rem 0;flex:1;overflow-y:auto}
+.nav-section-label{padding:.4rem 1.4rem .2rem;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:.65rem 1.4rem;
+  color:var(--text3);text-decoration:none;font-size:.875rem;font-weight:500;
+  transition:all var(--transition);border-left:3px solid transparent;cursor:pointer;
+  position:relative;
+}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nav-item.active{color:#a5b4fc;border-left-color:var(--accent);background:rgba(99,102,241,.08)}
+.nav-item.active .nav-icon{color:var(--accent)}
+.nav-icon{font-size:1rem;width:20px;text-align:center;transition:var(--transition)}
+.nav-badge{
+  margin-left:auto;background:rgba(99,102,241,.2);color:#a5b4fc;
+  font-size:.65rem;padding:2px 7px;border-radius:99px;font-weight:700;
+}
+
+.sidebar-footer{padding:1rem 1.2rem;border-top:1px solid var(--border)}
+.api-pill{
+  display:flex;align-items:center;gap:8px;padding:.5rem .8rem;
+  background:var(--surface);border-radius:8px;font-size:.75rem;color:var(--text3);
+}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:.4s}
+.status-dot.online{background:var(--success);box-shadow:0 0 8px var(--success)}
+.status-dot.offline{background:var(--danger)}
+
+/* ══ MAIN ════════════════════════════════════════════════════ */
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── TOPBAR ──────────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.9rem 2rem;
+  background:rgba(7,11,20,.9);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.menu-btn{display:none;background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer;padding:4px}
+.page-breadcrumb{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text3)}
+.page-breadcrumb span{color:var(--text);font-weight:600;font-size:.95rem}
+.topbar-right{display:flex;align-items:center;gap:.6rem}
+.topbar-search{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:8px;padding:.45rem .9rem;
+  color:var(--text3);font-size:.82rem;font-family:var(--mono);
+  transition:.2s;cursor:text;
+}
+.topbar-search:focus-within{border-color:var(--accent);background:rgba(99,102,241,.06)}
+.topbar-search input{background:none;border:none;outline:none;color:var(--text);font-size:.82rem;font-family:var(--font);width:140px}
+
+.btn{font-family:var(--font);font-size:.83rem;font-weight:600;padding:.55rem 1.1rem;border-radius:8px;border:none;cursor:pointer;transition:all var(--transition);white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 16px rgba(99,102,241,.35)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(99,102,241,.5)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text);background:rgba(255,255,255,.08)}
+.btn-danger{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:var(--danger)}
+.btn-danger:hover{background:rgba(248,113,113,.2)}
+.btn-success{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:var(--success)}
+.btn-success:hover{background:rgba(52,211,153,.2)}
+.btn-sm{padding:.38rem .75rem;font-size:.76rem}
+.btn-icon{padding:.5rem;border-radius:7px}
+
+/*PAGE WRAPPER*/
+.page-wrap{padding:2rem;flex:1;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page{display:none}
+.page.active{display:block}
+
+/*CARDS*/
+.card{background:rgba(13,18,32,.8);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem}
+.card-title{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:1.1rem}
+
+/*DASHBOARD*/
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat-card{
+  background:rgba(13,18,32,.8);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.3rem 1.5rem;position:relative;overflow:hidden;transition:all var(--transition);
+}
+.stat-card:hover{border-color:rgba(99,102,241,.35);transform:translateY(-2px)}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.stat-icon{font-size:1.4rem;margin-bottom:.6rem;opacity:.8}
+.stat-val{font-size:2rem;font-weight:900;line-height:1;font-family:var(--mono);background:linear-gradient(135deg,#f1f5f9,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-lbl{font-size:.72rem;color:var(--text3);margin-top:.3rem;letter-spacing:.04em;text-transform:uppercase}
+.stat-delta{font-size:.72rem;margin-top:.4rem}
+.stat-delta.up{color:var(--success)}
+.stat-delta.neutral{color:var(--text3)}
+
+.dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:1.2rem;margin-bottom:1.2rem}
+.dash-grid .full{grid-column:1/-1}
+
+/* Activity feed */
+.activity-list{display:flex;flex-direction:column;gap:.5rem}
+.activity-item{display:flex;align-items:center;gap:.8rem;padding:.55rem .6rem;border-radius:7px;font-size:.8rem;transition:.15s}
+.activity-item:hover{background:rgba(255,255,255,.03)}
+.activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.act-create{background:var(--success)}
+.act-update{background:var(--accent)}
+.act-delete{background:var(--danger)}
+.act-login{background:var(--accent3)}
+.act-default{background:var(--text3)}
+.activity-action{flex:1;color:var(--text2)}
+.activity-time{color:var(--text3);font-size:.72rem;font-family:var(--mono);white-space:nowrap}
+
+/*PROMPT LIBRARY*/
+.toolbar{display:flex;align-items:center;gap:.8rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.search-wrap{
+  display:flex;align-items:center;gap:8px;flex:1;min-width:200px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;
+  padding:.5rem .9rem;
+}
+.search-wrap:focus-within{border-color:var(--accent)}
+.search-wrap input{background:none;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:.88rem;flex:1}
+.filter-select{
+  background:rgba(13,18,32,.9);border:1px solid var(--border);color:var(--text2);
+  font-family:var(--font);font-size:.82rem;padding:.5rem .9rem;border-radius:8px;cursor:pointer;outline:none;
+}
+.filter-select:focus{border-color:var(--accent)}
+.filter-select option{background:#0d1220}
+
+.prompt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1rem}
+.prompt-card{
+  background:rgba(13,18,32,.8);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.2rem;cursor:pointer;transition:all var(--transition);position:relative;overflow:hidden;
+}
+.prompt-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,102,241,0),transparent);transition:.4s}
+.prompt-card:hover{border-color:rgba(99,102,241,.35);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.prompt-card:hover::before{background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent)}
+.pc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.6rem}
+.pc-title{font-size:.95rem;font-weight:700;line-height:1.3;flex:1}
+.pc-cat{font-size:.65rem;padding:2px 9px;background:rgba(99,102,241,.12);color:#a5b4fc;border-radius:99px;white-space:nowrap;flex-shrink:0}
+.pc-desc{font-size:.78rem;color:var(--text2);margin-bottom:.8rem;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pc-meta{display:flex;align-items:center;gap:10px;font-size:.72rem;color:var(--text3);margin-bottom:.9rem;flex-wrap:wrap}
+.pc-model{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(6,182,212,.1);color:var(--accent3);
+  padding:2px 8px;border-radius:99px;font-size:.65rem;font-weight:600;
+}
+.quality-score{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:99px;font-size:.65rem;font-weight:700;
+}
+.qs-high{background:rgba(52,211,153,.12);color:var(--success)}
+.qs-mid{background:rgba(251,191,36,.12);color:var(--warn)}
+.qs-low{background:rgba(248,113,113,.12);color:var(--danger)}
+.pc-scores{margin-bottom:.9rem}
+.score-mini-row{display:flex;align-items:center;gap:8px;font-size:.68rem;margin-bottom:3px}
+.score-mini-lbl{width:70px;color:var(--text3)}
+.score-mini-bar{flex:1;height:3px;background:var(--border);border-radius:99px;overflow:hidden}
+.score-mini-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .8s ease}
+.score-mini-val{width:30px;text-align:right;color:var(--text3)}
+.pc-actions{display:flex;gap:.4rem;flex-wrap:wrap}
+
+.fav-star{position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;font-size:1rem;opacity:.4;transition:.2s}
+.fav-star.active{opacity:1}
+
+/*VERSION HISTORY*/
+.vh-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.vh-select-wrap{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.version-list{display:flex;flex-direction:column;gap:.9rem}
+.version-card{
+  background:rgba(13,18,32,.8);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.3rem;transition:border-color var(--transition);position:relative;
+}
+.version-card.is-active{border-color:rgba(99,102,241,.45)}
+.version-card.is-active::before{
+  content:'ACTIVE';position:absolute;top:12px;right:14px;
+  font-size:.62rem;font-weight:700;letter-spacing:.1em;color:#a5b4fc;
+  background:rgba(99,102,241,.15);padding:2px 9px;border-radius:99px;
+}
+.vc-top{display:flex;align-items:flex-start;gap:1rem;margin-bottom:.8rem}
+.vc-vnum{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:rgba(255,255,255,.15);line-height:1;flex-shrink:0}
+.vc-meta{flex:1}
+.vc-commit{font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.vc-submeta{display:flex;gap:.9rem;font-size:.72rem;color:var(--text3);flex-wrap:wrap}
+.vc-content{
+  background:rgba(255,255,255,.03);border-radius:7px;padding:.9rem 1rem;
+  font-size:.78rem;color:var(--text2);line-height:1.65;
+  font-family:var(--mono);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  margin-bottom:.9rem;
+  border-left:3px solid rgba(99,102,241,.3);
+}
+.vc-score-row{display:flex;gap:1.4rem;margin-bottom:.9rem;flex-wrap:wrap}
+.vc-score-item{display:flex;flex-direction:column;align-items:center;gap:3px}
+.vc-score-ring{
+  width:44px;height:44px;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.vc-score-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.vc-score-ring-val{font-size:.7rem;font-weight:700;font-family:var(--mono);color:var(--text);z-index:1}
+.vc-score-lbl{font-size:.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.vc-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+/*AI SUGGESTIONS*/
+.sug-layout{display:grid;grid-template-columns:280px 1fr;gap:1.2rem;align-items:start}
+.sug-controls{position:sticky;top:80px}
+.sug-controls .card{display:flex;flex-direction:column;gap:.8rem}
+.sug-controls label{font-size:.78rem;font-weight:600;color:var(--text2)}
+.checkbox-group{display:flex;flex-direction:column;gap:.5rem}
+.checkbox-label{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2);cursor:pointer;padding:.3rem 0}
+.checkbox-label input{accent-color:var(--accent);width:14px;height:14px}
+.sug-results{display:flex;flex-direction:column;gap:1rem}
+.sug-card{
+  background:rgba(13,18,32,.8);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.3rem;transition:border-color var(--transition);
+}
+.sug-card:hover{border-color:var(--border2)}
+.sug-type-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.sug-badge{
+  font-size:.65rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  padding:3px 10px;border-radius:99px;
+}
+.sb-clarity{background:rgba(6,182,212,.12);color:var(--accent3)}
+.sb-specificity{background:rgba(99,102,241,.12);color:#a5b4fc}
+.sb-structure{background:rgba(251,191,36,.12);color:var(--warn)}
+.sb-tone{background:rgba(192,132,252,.12);color:#c084fc}
+.sug-conf{display:flex;align-items:center;gap:8px;font-size:.73rem;color:var(--text3)}
+.conf-bar{width:80px;height:4px;background:var(--border);border-radius:99px;overflow:hidden}
+.conf-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.sug-diff{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.9rem}
+.diff-box{
+  background:rgba(255,255,255,.03);border-radius:7px;padding:.9rem;
+  font-size:.76rem;line-height:1.65;color:var(--text2);
+  font-family:var(--mono);max-height:160px;overflow-y:auto;
+}
+.diff-box.orig{border-left:3px solid rgba(248,113,113,.4)}
+.diff-box.sugg{border-left:3px solid rgba(52,211,153,.4)}
+.diff-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.4rem}
+.sug-reason{
+  font-size:.78rem;color:var(--text2);font-style:italic;
+  margin-bottom:.9rem;line-height:1.6;
+  background:rgba(255,255,255,.02);border-radius:6px;padding:.6rem .8rem;
+  border-left:3px solid rgba(99,102,241,.3);
+}
+.sug-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.applied-overlay{
+  display:flex;align-items:center;justify-content:center;gap:.5rem;
+  color:var(--success);font-size:.82rem;font-weight:600;padding:.5rem;
+  background:rgba(52,211,153,.06);border-radius:7px;
+}
+
+/*COMPARE*/
+.compare-ctrl{margin-bottom:1.4rem}
+.compare-selectors{display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap}
+.compare-selectors>div{display:flex;flex-direction:column;gap:.4rem;flex:1;min-width:140px}
+.compare-selectors label{font-size:.75rem;color:var(--text2);font-weight:600}
+.diff-summary{
+  display:flex;gap:1.5rem;margin-bottom:1.4rem;flex-wrap:wrap;
+  padding:1.2rem 1.4rem;background:rgba(13,18,32,.8);border:1px solid var(--border);border-radius:var(--radius);
+}
+.ds-stat{text-align:center}
+.ds-val{font-size:1.5rem;font-weight:800;font-family:var(--mono);color:#a5b4fc}
+.ds-lbl{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-top:2px}
+.compare-panes{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.compare-pane{background:rgba(13,18,32,.8);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem}
+.cp-header{font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:.8rem;display:flex;align-items:center;justify-content:space-between}
+.cp-content{font-size:.8rem;color:var(--text);line-height:1.7;font-family:var(--mono);white-space:pre-wrap;max-height:400px;overflow-y:auto}
+
+/*MODALS*/
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{
+  background:rgba(13,18,32,.98);border:1px solid var(--border2);border-radius:16px;
+  width:min(620px,95vw);max-height:90vh;overflow-y:auto;
+  animation:modalIn .25s ease;
+  position:relative;
+}
+@keyframes modalIn{from{opacity:0;scale:.95;transform:translateY(16px)}to{opacity:1;scale:1;transform:translateY(0)}}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:1.3rem 1.5rem;border-bottom:1px solid var(--border)}
+.modal-head h3{font-size:1.05rem;font-weight:800}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1.1rem;padding:.3rem .5rem;border-radius:6px;line-height:1;transition:.2s}
+.modal-close:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.modal-body{padding:1.5rem;display:flex;flex-direction:column;gap:.9rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+.form-group label{display:block;font-size:.76rem;font-weight:600;color:var(--text2);margin-bottom:.35rem}
+.form-input,.form-textarea,.form-select{
+  width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  color:var(--text);font-family:var(--font);font-size:.88rem;padding:.65rem .9rem;
+  border-radius:8px;outline:none;transition:.2s;
+}
+.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--accent);background:rgba(99,102,241,.06);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.form-textarea{resize:vertical;min-height:120px;line-height:1.65;font-family:var(--mono);font-size:.82rem}
+.form-select option{background:#0d1220}
+.modal-footer{display:flex;justify-content:flex-end;gap:.6rem;padding:1rem 1.5rem;border-top:1px solid var(--border)}
+
+/*TOAST*/
+.toast{
+  position:fixed;bottom:2rem;right:2rem;z-index:9999;
+  background:rgba(13,18,32,.98);border:1px solid var(--border2);
+  color:var(--text);font-size:.85rem;padding:.9rem 1.3rem;
+  border-radius:10px;opacity:0;transform:translateY(16px);transition:.3s;
+  pointer-events:none;max-width:360px;
+  display:flex;align-items:center;gap:.6rem;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-color:rgba(52,211,153,.4)}
+.toast.error{border-color:rgba(248,113,113,.4)}
+.toast-icon{font-size:1rem}
+
+/*EMPTY STATES*/
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:4rem 2rem;text-align:center;color:var(--text3);
+}
+.empty-icon{font-size:2.5rem;margin-bottom:1rem;opacity:.5}
+.empty-title{font-size:.95rem;font-weight:600;color:var(--text2);margin-bottom:.4rem}
+.empty-sub{font-size:.82rem;max-width:300px;line-height:1.6}
+.loading-ring{
+  width:32px;height:32px;border:3px solid rgba(255,255,255,.1);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:2rem auto;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/*RESPONSIVE*/
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .menu-btn{display:block}
+  .sug-layout{grid-template-columns:1fr}
+  .sug-diff{grid-template-columns:1fr}
+  .compare-panes{grid-template-columns:1fr}
+  .dash-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .page-wrap{padding:1rem}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .prompt-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR-->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top">
+    <a class="sidebar-logo" href="index.html">
+      <div class="sidebar-logo-icon">⬡</div>
+      <span class="sidebar-logo-text">PromptFlow</span>
+    </a>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">Loading…</div>
+        <div class="user-role">Prompt Engineer</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <div class="nav-item active" data-page="dashboard"><span class="nav-icon">◈</span>Dashboard</div>
+    <div class="nav-item" data-page="prompts"><span class="nav-icon">◇</span>Prompt Library<span class="nav-badge" id="navPromptCount">0</span></div>
+
+    <div class="nav-section-label" style="margin-top:.5rem">Tools</div>
+    <div class="nav-item" data-page="history"><span class="nav-icon">◎</span>Version History</div>
+    <div class="nav-item" data-page="suggestions"><span class="nav-icon">⬡</span>AI Suggestions</div>
+    <div class="nav-item" data-page="compare"><span class="nav-icon">⊞</span>Compare Versions</div>
+
+    <div class="nav-section-label" style="margin-top:.5rem">Account</div>
+    <div class="nav-item" data-page="analytics"><span class="nav-icon">▦</span>Analytics</div>
+    <div class="nav-item" id="logoutBtn"><span class="nav-icon">→</span>Sign Out</div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="api-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusLbl">Connecting…</span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN-->
+<div class="main" id="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" id="menuBtn">☰</button>
+      <div class="page-breadcrumb">PromptFlow / <span id="pageTitle">Dashboard</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-search">
+        <span>🔍</span>
+        <input id="globalSearch" placeholder="Search prompts…" oninput="onGlobalSearch(this.value)"/>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openNewVersionModal()">Edit Prompt</button>
+      <button class="btn btn-primary btn-sm" onclick="openNewPromptModal()">+ New Prompt</button>
+    </div>
+  </div>
+
+  <div class="page-wrap">
+
+    <!-- DASHBOARD-->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-icon">◇</div><div class="stat-val" id="s-prompts">—</div><div class="stat-lbl">Prompts</div></div>
+        <div class="stat-card"><div class="stat-icon">◎</div><div class="stat-val" id="s-versions">—</div><div class="stat-lbl">Versions</div></div>
+        <div class="stat-card"><div class="stat-icon">⬡</div><div class="stat-val" id="s-suggestions">—</div><div class="stat-lbl">AI Suggestions</div></div>
+        <div class="stat-card"><div class="stat-icon">◈</div><div class="stat-val" id="s-quality">—</div><div class="stat-lbl">Avg Quality</div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-title">Quality Timeline</div>
+          <canvas id="qualityChart" height="180"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">By Category</div>
+          <canvas id="catChart" height="180"></canvas>
+        </div>
+        <div class="card" style="grid-column:1/2">
+          <div class="card-title">Top Prompts by Versions</div>
+          <div id="topPromptsList"></div>
+        </div>
+        <div class="card" style="grid-column:2/3">
+          <div class="card-title">Recent Activity</div>
+          <div class="activity-list" id="activityList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT LIBRARY-->
+    <div class="page" id="page-prompts">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span style="color:var(--text3)">🔍</span>
+          <input id="promptSearch" placeholder="Search prompts…" oninput="filterPrompts()"/>
+        </div>
+        <select class="filter-select" id="catFilter" onchange="filterPrompts()">
+          <option value="">All Categories</option>
+          <option>general</option><option>coding</option><option>writing</option>
+          <option>analysis</option><option>creative</option><option>business</option>
+        </select>
+        <select class="filter-select" id="sortFilter" onchange="filterPrompts()">
+          <option value="newest">Newest</option>
+          <option value="quality">Best Quality</option>
+          <option value="versions">Most Versions</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="toggleFavFilter()" id="favFilterBtn">☆ Favorites</button>
+      </div>
+      <div class="prompt-grid" id="promptGrid">
+        <div class="loading-ring"></div>
+      </div>
+    </div>
+
+    <!--VERSION HISTORY-->
+    <div class="page" id="page-history">
+      <div class="vh-header">
+        <div class="vh-select-wrap">
+          <label style="font-size:.8rem;color:var(--text3)">Prompt:</label>
+          <select class="filter-select" id="vhPromptSelect" onchange="loadVersionsFor(this.value)">
+            <option value="">— select a prompt —</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openNewVersionModal()">+ Commit New Version</button>
+      </div>
+      <div id="versionList" class="version-list">
+        <div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Select a prompt</div><div class="empty-sub">Choose a prompt above to view its full version history.</div></div>
+      </div>
+    </div>
+
+    <!--AI SUGGESTIONS-->
+    <div class="page" id="page-suggestions">
+      <div class="sug-layout">
+        <div class="sug-controls">
+          <div class="card">
+            <div class="card-title">Generate Suggestions</div>
+            <label>Prompt</label>
+            <select class="filter-select" id="sugPromptSel" style="width:100%"></select>
+            <label>Suggestion Types</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label"><input type="checkbox" value="clarity" checked/> Clarity</label>
+              <label class="checkbox-label"><input type="checkbox" value="specificity" checked/> Specificity</label>
+              <label class="checkbox-label"><input type="checkbox" value="structure" checked/> Structure</label>
+              <label class="checkbox-label"><input type="checkbox" value="tone" checked/> Tone</label>
+            </div>
+            <button class="btn btn-primary" id="genSugBtn" onclick="generateSuggestions()" style="width:100%">
+              ⬡ Generate AI Suggestions
+            </button>
+          </div>
+        </div>
+        <div class="sug-results" id="sugResults">
+          <div class="empty-state"><div class="empty-icon">⬡</div><div class="empty-title">No suggestions yet</div><div class="empty-sub">Select a prompt and click Generate to get AI-powered improvement suggestions.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ COMPARE ════════════════════════════════════════ -->
+    <div class="page" id="page-compare">
+      <div class="card compare-ctrl">
+        <div class="card-title">Compare Versions</div>
+        <div class="compare-selectors">
+          <div><label>Prompt</label><select class="filter-select" id="cmpPromptSel" onchange="loadCmpVersions()"></select></div>
+          <div><label>Version A</label><select class="filter-select" id="cmpV1"></select></div>
+          <div><label>Version B</label><select class="filter-select" id="cmpV2"></select></div>
+          <div style="align-self:flex-end"><button class="btn btn-primary" onclick="doCompare()">⊞ Compare</button></div>
+        </div>
+      </div>
+      <div id="compareResult"></div>
+    </div>
+
+    <!--ANALYTICS-->
+    <div class="page" id="page-analytics">
+      <div class="stats-row" id="analyticsStats"></div>
+      <div class="dash-grid">
+        <div class="card full">
+          <div class="card-title">Quality Progression</div>
+          <canvas id="analyticsQualityChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-wrap -->
+</div><!-- /main -->
+
+<!--MODAL: New Prompt-->
+<div class="overlay" id="newPromptModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="promptModalTitle">New Prompt</h3>
+      <button class="modal-close" onclick="closeModal('newPromptModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editPromptId"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Title *</label>
+          <input class="form-input" id="pTitle" placeholder="Code Review Assistant"/>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select class="form-select" id="pCategory">
+            <option>general</option><option>coding</option><option>writing</option>
+            <option>analysis</option><option>creative</option><option>business</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input class="form-input" id="pDesc" placeholder="What does this prompt do?"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>AI Model</label>
+          <select class="form-select" id="pModel">
+            <option>gpt-4</option><option>gpt-3.5-turbo</option>
+            <option>claude-3-opus</option><option>claude-3-sonnet</option>
+            <option>gemini-pro</option><option>llama-3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tags (comma-separated)</label>
+          <input class="form-input" id="pTags" placeholder="ai, coding, review"/>
+        </div>
+      </div>
+      <div class="form-group" id="pContentGroup">
+        <label>Prompt Content *</label>
+        <textarea class="form-textarea" id="pContent" rows="6" placeholder="Write your prompt here…"></textarea>
+      </div>
+      <div class="form-group" id="pCommitGroup">
+        <label>Commit Message</label>
+        <input class="form-input" id="pCommit" placeholder="Initial version"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('newPromptModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="savePrompt()">Save Prompt</button>
+    </div>
+  </div>
+</div>
+
+<!--MODAL: New Version-->
+<div class="overlay" id="newVersionModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Commit New Version</h3>
+      <button class="modal-close" onclick="closeModal('newVersionModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vModalPromptId"/>
+      <div class="form-group">
+        <label>Prompt</label>
+        <select class="form-select" id="vModalPromptSel"></select>
+      </div>
+      <div class="form-group">
+        <label>Updated Content *</label>
+        <textarea class="form-textarea" id="vContent" rows="8" placeholder="Updated prompt content…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Commit Message</label>
+        <input class="form-input" id="vCommit" placeholder="What changed in this version?"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('newVersionModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveVersion()">Commit Version</button>
+    </div>
+  </div>
+</div>
+
+<!--TOAST-->
+<div class="toast" id="toast"><span class="toast-icon" id="toastIcon"></span><span id="toastMsg"></span></div>
+
+<script>
+'use strict';
+const API='http://localhost:8000/api';
+
+//Auth guard
+const token=localStorage.getItem('pf_token');
+const user=JSON.parse(localStorage.getItem('pf_user')||'{}');
+if(!token){location.href='login.html';throw new Error('Not authenticated');}
+
+//Populate user UI
+document.getElementById('sidebarName').textContent=user.full_name||user.username||'User';
+const av=document.getElementById('sidebarAvatar');
+if(user.avatar_url){const img=document.createElement('img');img.src=user.avatar_url;av.appendChild(img);}
+else av.textContent=(user.username||'U')[0].toUpperCase();
+
+//HTTP helper
+async function http(method,path,body){
+  const opts={method,headers:{'Authorization':'Bearer '+token}};
+  if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  const r=await fetch(API+path,opts);
+  if(r.status===401){localStorage.clear();location.href='login.html';}
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||'Request failed');}
+  return r.status===204?null:r.json();
+}
+
+//Toast
+function toast(msg,type='info'){
+  const el=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  document.getElementById('toastIcon').textContent=type==='success'?'✓':type==='error'?'✕':'ℹ';
+  el.className=`toast show ${type}`;
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+//State
+let allPrompts=[],charts={},favFilter=false;
+
+//Navigation
+const PAGE_TITLES={dashboard:'Dashboard',prompts:'Prompt Library',history:'Version History',suggestions:'AI Suggestions',compare:'Compare Versions',analytics:'Analytics'};
+document.querySelectorAll('.nav-item[data-page]').forEach(el=>{
+  el.addEventListener('click',()=>{
+    navigateTo(el.dataset.page);
+    if(window.innerWidth<900)document.getElementById('sidebar').classList.remove('open');
+  });
+});
+document.getElementById('menuBtn').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+document.getElementById('logoutBtn').addEventListener('click',()=>{localStorage.clear();location.href='index.html';});
+
+function navigateTo(page){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  document.getElementById('pageTitle').textContent=PAGE_TITLES[page]||page;
+  const loaders={dashboard:loadDashboard,prompts:loadPrompts,history:loadHistoryPage,suggestions:loadSuggestionsPage,compare:loadComparePage,analytics:loadAnalytics};
+  loaders[page]?.();
+}
+
+//Health
+async function checkHealth(){
+  const dot=document.getElementById('statusDot'),lbl=document.getElementById('statusLbl');
+  try{await fetch(API.replace('/api','')+'/health');dot.className='status-dot online';lbl.textContent='API online';}
+  catch{dot.className='status-dot offline';lbl.textContent='API offline';}
+}
+checkHealth();setInterval(checkHealth,30000);
+// DASHBOARD
+async function loadDashboard(){
+  try{
+    const d=await http('GET','/analytics/dashboard');
+    document.getElementById('s-prompts').textContent=d.total_prompts;
+    document.getElementById('s-versions').textContent=d.total_versions;
+    document.getElementById('s-suggestions').textContent=d.total_suggestions;
+    document.getElementById('s-quality').textContent=pct(d.avg_quality_score||0);
+    renderQChart(d.quality_timeline||[]);
+    renderCatChart(d.category_distribution||{});
+    renderTopPrompts(d.top_prompts||[]);
+    renderActivity(d.recent_activity||[]);
+  }catch(e){toast('Dashboard failed: '+e.message,'error');}
+}
+
+function renderQChart(timeline){
+  charts.quality?.destroy();
+  const ctx=document.getElementById('qualityChart').getContext('2d');
+  charts.quality=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:timeline.map((_,i)=>`#${i+1}`),
+      datasets:[{label:'Quality',data:timeline.map(t=>(t.q||0)*100),
+        borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.1)',fill:true,tension:.4,
+        pointBackgroundColor:'#6366f1',pointRadius:4,pointHoverRadius:6}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{y:{min:0,max:100,ticks:{color:'#475569',font:{family:'JetBrains Mono',size:10}},grid:{color:'rgba(255,255,255,.05)'}},
+              x:{ticks:{color:'#475569',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}}}
+  });
+}
+
+function renderCatChart(cats){
+  charts.cat?.destroy();
+  const ctx=document.getElementById('catChart').getContext('2d');
+  const entries=Object.entries(cats);
+  if(!entries.length)return;
+  charts.cat=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:entries.map(e=>e[0]),
+      datasets:[{data:entries.map(e=>e[1]),
+        backgroundColor:['#6366f1','#8b5cf6','#06b6d4','#f59e0b','#34d399','#f87171'],
+        borderWidth:0,hoverBorderWidth:2,hoverBorderColor:'rgba(255,255,255,.2)'}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{family:'JetBrains Mono',size:10},boxWidth:10,padding:8}}}}
+  });
+}
+
+function renderTopPrompts(list){
+  const el=document.getElementById('topPromptsList');
+  if(!list.length){el.innerHTML='<p style="color:var(--text3);font-size:.8rem;padding:1rem 0">No prompts yet.</p>';return;}
+  el.innerHTML=list.map((p,i)=>`
+    <div style="display:flex;align-items:center;gap.9rem;padding:.55rem .6rem;border-radius:7px;cursor:pointer;transition:.15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background=''" onclick="navigateTo('prompts')">
+      <span style="width:20px;font-size:.72rem;color:var(--text3);font-family:var(--mono)">${i+1}</span>
+      <span style="flex:1;font-size:.82rem">${esc(p.title)}</span>
+      <span style="font-size:.7rem;background:rgba(99,102,241,.12);color:#a5b4fc;padding:2px 8px;border-radius:99px">${p.versions}v</span>
+    </div>`).join('');
+}
+
+function renderActivity(list){
+  const el=document.getElementById('activityList');
+  if(!list.length){el.innerHTML='<p style="color:var(--text3);font-size:.8rem;padding:.5rem 0">No activity yet.</p>';return;}
+  el.innerHTML=list.map(a=>`
+    <div class="activity-item">
+      <div class="activity-dot ${actClass(a.action)}"></div>
+      <span class="activity-action">${formatAction(a.action)} ${a.entity?'<span style="color:var(--text3)">'+a.entity+'</span>':''}</span>
+      <span class="activity-time">${relTime(a.created_at)}</span>
+    </div>`).join('');
+}
+function actClass(a){if(a.includes('create'))return'act-create';if(a.includes('delete'))return'act-delete';if(a==='login')return'act-login';return'act-default';}
+function formatAction(a){return a.replace(/_/g,' ');}
+
+// PROMPTS
+async function loadPrompts(){
+  document.getElementById('promptGrid').innerHTML='<div class="loading-ring"></div>';
+  try{
+    allPrompts=await http('GET','/prompts/');
+    document.getElementById('navPromptCount').textContent=allPrompts.length;
+    renderPrompts(allPrompts);
+  }catch(e){
+    document.getElementById('promptGrid').innerHTML=`<div class="empty-state"><div class="empty-icon">◇</div><div class="empty-title">Failed to load</div><div class="empty-sub">${esc(e.message)}</div></div>`;
+  }
+}
+
+function filterPrompts(){
+  const q=document.getElementById('promptSearch').value.toLowerCase();
+  const cat=document.getElementById('catFilter').value;
+  const sort=document.getElementById('sortFilter').value;
+  let list=allPrompts.filter(p=>
+    (!q||p.title.toLowerCase().includes(q))&&
+    (!cat||p.category===cat)&&
+    (!favFilter||p.is_favorite)
+  );
+  if(sort==='quality')list=[...list].sort((a,b)=>(b.latest_quality||0)-(a.latest_quality||0));
+  else if(sort==='versions')list=[...list].sort((a,b)=>(b.version_count||0)-(a.version_count||0));
+  renderPrompts(list);
+}
+
+function renderPrompts(list){
+  const grid=document.getElementById('promptGrid');
+  if(!list.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">◇</div><div class="empty-title">No prompts found</div><div class="empty-sub">Create your first prompt to get started.</div></div>`;
+    return;
+  }
+  grid.innerHTML=list.map(p=>{
+    const q=p.latest_quality||0;
+    const qCls=q>=.7?'qs-high':q>=.4?'qs-mid':'qs-low';
+    return `
+    <div class="prompt-card" onclick="openPromptDetail(${p.id})">
+      <button class="fav-star ${p.is_favorite?'active':''}" onclick="toggleFav(event,${p.id},${p.is_favorite})">${p.is_favorite?'★':'☆'}</button>
+      <div class="pc-header">
+        <div class="pc-title">${esc(p.title)}</div>
+        <span class="pc-cat">${esc(p.category||'general')}</span>
+      </div>
+      <div class="pc-desc">${esc(p.description||'No description provided.')}</div>
+      <div class="pc-meta">
+        <span class="pc-model">${esc(p.model||'gpt-4')}</span>
+        <span class="quality-score ${qCls}">${pct(q)} quality</span>
+        <span>v${p.latest_version||1}</span>
+        <span style="color:var(--text3)">${fmtDate(p.created_at)}</span>
+      </div>
+      <div class="pc-scores">
+        ${scoreMiniRow('Quality',q)}
+      </div>
+      <div class="pc-actions">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openVersionHistory(${p.id})">◎ History</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openSuggestions(${p.id})">⬡ AI Suggest</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editPrompt(${p.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deletePrompt(${p.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function scoreMiniRow(label,val){
+  return`<div class="score-mini-row"><span class="score-mini-lbl">${label}</span><div class="score-mini-bar"><div class="score-mini-fill" style="width:${Math.round(val*100)}%"></div></div><span class="score-mini-val">${Math.round(val*100)}%</span></div>`;
+}
+
+function toggleFavFilter(){
+  favFilter=!favFilter;
+  document.getElementById('favFilterBtn').style.color=favFilter?'var(--gold)':'';
+  filterPrompts();
+}
+
+async function toggleFav(evt,id,current){
+  evt.stopPropagation();
+  try{
+    await http('PUT','/prompts/'+id,{is_favorite:!current});
+    await loadPrompts();
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+async function deletePrompt(id){
+  if(!confirm('Delete this prompt and ALL its versions?'))return;
+  try{await http('DELETE','/prompts/'+id);toast('Prompt deleted','success');loadPrompts();}
+  catch(e){toast('Delete failed: '+e.message,'error');}
+}
+
+function openVersionHistory(id){
+  navigateTo('history');
+  setTimeout(()=>{
+    const sel=document.getElementById('vhPromptSelect');
+    if(sel){sel.value=id;loadVersionsFor(id);}
+  },200);
+}
+function openSuggestions(id){
+  navigateTo('suggestions');
+  setTimeout(()=>{
+    const sel=document.getElementById('sugPromptSel');
+    if(sel)sel.value=id;
+  },200);
+}
+function openPromptDetail(id){
+  // Navigate to history for now
+  openVersionHistory(id);
+}
+function onGlobalSearch(q){
+  if(document.getElementById('page-prompts').classList.contains('active')){
+    document.getElementById('promptSearch').value=q;filterPrompts();
+  }
+}
+
+// VERSION HISTORY
+
+async function loadHistoryPage(){
+  try{
+    const prompts=await http('GET','/prompts/');
+    const sel=document.getElementById('vhPromptSelect');
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— select a prompt —</option>'+prompts.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('');
+    if(cur)sel.value=cur,loadVersionsFor(cur);
+  }catch{}
+  // Also populate version modal select
+  populatePromptSelects();
+}
+
+async function loadVersionsFor(promptId){
+  if(!promptId){document.getElementById('versionList').innerHTML='<div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Select a prompt</div></div>';return;}
+  document.getElementById('versionList').innerHTML='<div class="loading-ring"></div>';
+  try{
+    const versions=await http('GET','/versions/'+promptId);
+    if(!versions.length){document.getElementById('versionList').innerHTML='<div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">No versions yet</div><div class="empty-sub">Commit your first version to get started.</div></div>';return;}
+    document.getElementById('versionList').innerHTML=versions.map(v=>renderVersionCard(v,promptId)).join('');
+    // animate bars
+    requestAnimationFrame(()=>{
+      document.querySelectorAll('.vc-ring-anim').forEach(el=>{
+        el.style.strokeDashoffset=el.dataset.offset;
+      });
+    });
+  }catch(e){toast('Failed to load versions: '+e.message,'error');}
+}
+
+function renderVersionCard(v,promptId){
+  const q=v.quality_score||0,c=v.clarity_score||0,s=v.specificity_score||0;
+  return`
+  <div class="version-card ${v.is_active?'is-active':''}">
+    <div class="vc-top">
+      <div class="vc-vnum">v${v.version_number}</div>
+      <div class="vc-meta">
+        <div class="vc-commit">${esc(v.commit_message||'No message')}</div>
+        <div class="vc-submeta">
+          <span>🕐 ${fmtDate(v.created_at)}</span>
+          <span>📝 ${v.token_count||0} tokens</span>
+          <span>${sentimentIcon(v.sentiment)} ${v.sentiment||'neutral'}</span>
+          ${v.model_used?`<span>🤖 ${esc(v.model_used)}</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="vc-score-row">
+      ${ringScore('Overall',q)}
+      ${ringScore('Clarity',c)}
+      ${ringScore('Specific',s)}
+    </div>
+    <div class="vc-content">${esc(v.content)}</div>
+    <div class="vc-actions">
+      <button class="btn btn-ghost btn-sm" onclick="showFullContent('${esc(v.content.replace(/'/g,"\\'"))}')">👁 View Full</button>
+      ${!v.is_active?`<button class="btn btn-success btn-sm" onclick="doRollback(${promptId},${v.version_number})">↩ Rollback to v${v.version_number}</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="openCompareFrom(${promptId},${v.version_number})">⊞ Compare</button>
+    </div>
+  </div>`;
+}
+
+function ringScore(label,val){
+  const pctVal=Math.round(val*100);
+  const r=18,circ=2*Math.PI*r,offset=circ-(val*circ);
+  const col=val>=.7?'#34d399':val>=.4?'#fbbf24':'#f87171';
+  return`<div class="vc-score-item">
+    <div class="vc-score-ring">
+      <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="22" r="${r}" stroke="rgba(255,255,255,.06)" stroke-width="4"/>
+        <circle cx="22" cy="22" r="${r}" stroke="${col}" stroke-width="4" stroke-linecap="round"
+          stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+          class="vc-ring-anim" data-offset="${offset}"
+          style="transition:stroke-dashoffset 1s ease"/>
+      </svg>
+      <span class="vc-score-ring-val">${pctVal}</span>
+    </div>
+    <div class="vc-score-lbl">${label}</div>
+  </div>`;
+}
+
+async function doRollback(promptId,vNum){
+  if(!confirm(`Roll back to version ${vNum}? This creates a new active version.`))return;
+  try{
+    const v=await http('POST',`/versions/${promptId}/rollback/${vNum}`);
+    toast(`Rolled back — new version v${v.version_number} created`,'success');
+    loadVersionsFor(promptId);
+  }catch(e){toast('Rollback failed: '+e.message,'error');}
+}
+
+function showFullContent(content){
+  const decoded=content;
+  const overlay=document.createElement('div');
+  overlay.className='overlay open';
+  overlay.innerHTML=`<div class="modal"><div class="modal-head"><h3>Full Prompt Content</h3><button class="modal-close" onclick="this.closest('.overlay').remove()">✕</button></div><div class="modal-body"><pre style="font-family:var(--mono);font-size:.8rem;color:var(--text2);white-space:pre-wrap;line-height:1.7;max-height:60vh;overflow-y:auto">${esc(decoded)}</pre><button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(this.dataset.content);toast('Copied!','success')" data-content="${esc(decoded)}">📋 Copy</button></div></div>`;
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});
+  document.body.appendChild(overlay);
+}
+
+function openCompareFrom(promptId,vNum){
+  navigateTo('compare');
+  setTimeout(async()=>{
+    const sel=document.getElementById('cmpPromptSel');
+    sel.value=promptId;
+    await loadCmpVersions();
+    document.getElementById('cmpV1').value=vNum;
+  },300);
+}
+
+// AI SUGGESTIONS
+async function loadSuggestionsPage(){
+  await populatePromptSelects();
+}
+
+async function generateSuggestions(){
+  const promptId=Number(document.getElementById('sugPromptSel').value);
+  if(!promptId){toast('Select a prompt first','error');return;}
+  const types=[...document.querySelectorAll('.checkbox-group input:checked')].map(cb=>cb.value);
+  if(!types.length){toast('Select at least one suggestion type','error');return;}
+
+  const btn=document.getElementById('genSugBtn');
+  btn.disabled=true;btn.textContent='⬡ Generating…';
+  try{
+    const suggs=await http('POST','/suggestions/generate',{prompt_id:promptId,suggestion_types:types});
+    renderSuggestions(suggs);
+    toast(`Generated ${suggs.length} suggestion${suggs.length!==1?'s':''}! 🎯`,'success');
+  }catch(e){toast('Generation failed: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='⬡ Generate AI Suggestions';}
+}
+
+function renderSuggestions(suggs){
+  const el=document.getElementById('sugResults');
+  if(!suggs.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">⬡</div><div class="empty-title">No suggestions generated</div></div>';return;}
+  el.innerHTML=suggs.map(s=>`
+    <div class="sug-card" id="sug-${s.id}">
+      <div class="sug-type-row">
+        <span class="sug-badge sb-${s.suggestion_type}">${s.suggestion_type}</span>
+        <div class="sug-conf">
+          Confidence
+          <div class="conf-bar"><div class="conf-fill" style="width:${Math.round((s.confidence_score||0)*100)}%"></div></div>
+          <strong>${Math.round((s.confidence_score||0)*100)}%</strong>
+        </div>
+      </div>
+      <div class="sug-diff">
+        <div class="diff-box orig"><div class="diff-label">Original</div>${esc(s.original_text)}</div>
+        <div class="diff-box sugg"><div class="diff-label">Suggested</div>${esc(s.suggested_text)}</div>
+      </div>
+      <div class="sug-reason">💡 ${esc(s.reasoning||'')}</div>
+      <div class="sug-actions">
+        <button class="btn btn-success btn-sm" onclick="applySuggestion(${s.id})">✓ Apply as New Version</button>
+        <button class="btn btn-danger btn-sm" onclick="discardSuggestion(${s.id})">✕ Discard</button>
+      </div>
+    </div>`).join('');
+}
+
+async function applySuggestion(id){
+  try{
+    const r=await http('POST','/suggestions/apply',{suggestion_id:id,commit_message:'Applied AI suggestion'});
+    const card=document.getElementById('sug-'+id);
+    if(card)card.innerHTML=`<div class="applied-overlay">✓ Applied — New version v${r.new_version_number} created (quality: ${pct(r.quality_score)})</div>`;
+    toast('Suggestion applied! New version created 🚀','success');
+  }catch(e){toast('Apply failed: '+e.message,'error');}
+}
+
+async function discardSuggestion(id){
+  try{
+    await http('DELETE','/suggestions/'+id);
+    document.getElementById('sug-'+id)?.remove();
+    toast('Suggestion discarded','info');
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+
+// COMPARE
+async function loadComparePage(){
+  await populatePromptSelects();
+  const sel=document.getElementById('cmpPromptSel');
+  if(!sel.value&&sel.options.length>1){sel.selectedIndex=1;await loadCmpVersions();}
+}
+
+async function loadCmpVersions(){
+  const pid=document.getElementById('cmpPromptSel').value;
+  if(!pid)return;
+  try{
+    const versions=await http('GET','/versions/'+pid);
+    const opts=versions.map(v=>`<option value="${v.version_number}">v${v.version_number} — ${esc((v.commit_message||'').slice(0,35))}</option>`).join('');
+    document.getElementById('cmpV1').innerHTML=opts;
+    document.getElementById('cmpV2').innerHTML=opts;
+    if(versions.length>1)document.getElementById('cmpV2').selectedIndex=1;
+  }catch{}
+}
+
+async function doCompare(){
+  const pid=document.getElementById('cmpPromptSel').value;
+  const v1=Number(document.getElementById('cmpV1').value);
+  const v2=Number(document.getElementById('cmpV2').value);
+  if(!pid){toast('Select a prompt','error');return;}
+  if(v1===v2){toast('Select two different versions','error');return;}
+  try{
+    const r=await http('GET',`/versions/${pid}/diff/${v1}/${v2}`);
+    renderCompare(r);
+  }catch(e){toast('Compare failed: '+e.message,'error');}
+}
+
+function renderCompare(data){
+  const d=data.diff;
+  const qDelta=(data.version_b.quality||0)-(data.version_a.quality||0);
+  const sign=qDelta>=0?'+':'';
+  const col=qDelta>=0?'var(--success)':'var(--danger)';
+  document.getElementById('compareResult').innerHTML=`
+    <div class="diff-summary">
+      <div class="ds-stat"><div class="ds-val">${d.change_percentage}%</div><div class="ds-lbl">Changed</div></div>
+      <div class="ds-stat"><div class="ds-val">${Math.round(d.similarity*100)}%</div><div class="ds-lbl">Similarity</div></div>
+      <div class="ds-stat"><div class="ds-val">${d.token_delta>0?'+':''}${d.token_delta}</div><div class="ds-lbl">Token Δ</div></div>
+      <div class="ds-stat"><div class="ds-val" style="color:${col}">${sign}${Math.round(qDelta*100)}%</div><div class="ds-lbl">Quality Δ</div></div>
+      <div class="ds-stat"><div class="ds-val" style="font-size:.9rem">${d.change_label}</div><div class="ds-lbl">Change Type</div></div>
+    </div>
+    <div class="compare-panes">
+      <div class="compare-pane">
+        <div class="cp-header"><span>Version ${data.version_a.number}</span><span style="font-size:.72rem;color:var(--text3)">Quality: ${pct(data.version_a.quality||0)}</span></div>
+        <div class="cp-content">${esc(data.version_a.content)}</div>
+      </div>
+      <div class="compare-pane">
+        <div class="cp-header"><span>Version ${data.version_b.number}</span><span style="font-size:.72rem;color:var(--success)">Quality: ${pct(data.version_b.quality||0)}</span></div>
+        <div class="cp-content">${esc(data.version_b.content)}</div>
+      </div>
+    </div>`;
+}
+
+
+// ANALYTICS
+
+async function loadAnalytics(){
+  try{
+    const d=await http('GET','/analytics/dashboard');
+    document.getElementById('analyticsStats').innerHTML=`
+      <div class="stat-card"><div class="stat-icon">◇</div><div class="stat-val">${d.total_prompts}</div><div class="stat-lbl">Prompts</div></div>
+      <div class="stat-card"><div class="stat-icon">◎</div><div class="stat-val">${d.total_versions}</div><div class="stat-lbl">Versions</div></div>
+      <div class="stat-card"><div class="stat-icon">⬡</div><div class="stat-val">${d.total_suggestions}</div><div class="stat-lbl">Suggestions</div></div>
+      <div class="stat-card"><div class="stat-icon">✓</div><div class="stat-val">${d.applied_suggestions}</div><div class="stat-lbl">Applied</div></div>`;
+    charts.aq?.destroy();
+    const ctx=document.getElementById('analyticsQualityChart').getContext('2d');
+    const tl=d.quality_timeline||[];
+    charts.aq=new Chart(ctx,{type:'bar',data:{labels:tl.map((_,i)=>'#'+(i+1)),datasets:[{label:'Quality Score',data:tl.map(t=>(t.q||0)*100),backgroundColor:'rgba(99,102,241,.5)',borderColor:'#6366f1',borderWidth:2,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:'#475569'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#475569'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+  }catch(e){toast('Analytics failed','error');}
+}
+
+
+// MODALS
+
+let editingPromptId=null;
+
+function openNewPromptModal(){
+  editingPromptId=null;
+  document.getElementById('promptModalTitle').textContent='New Prompt';
+  ['pTitle','pDesc','pTags'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pContent').value='';
+  document.getElementById('pCommit').value='Initial version';
+  document.getElementById('pContentGroup').style.display='';
+  document.getElementById('pCommitGroup').style.display='';
+  document.getElementById('editPromptId').value='';
+  openModal('newPromptModal');
+}
+
+async function editPrompt(id){
+  try{
+    const p=await http('GET','/prompts/'+id);
+    editingPromptId=id;
+    document.getElementById('promptModalTitle').textContent='Edit Prompt';
+    document.getElementById('pTitle').value=p.title;
+    document.getElementById('pDesc').value=p.description||'';
+    document.getElementById('pCategory').value=p.category||'general';
+    document.getElementById('pModel').value=p.model||'gpt-4';
+    document.getElementById('pTags').value=(p.tags||[]).join(', ');
+    document.getElementById('pContentGroup').style.display='none';
+    document.getElementById('pCommitGroup').style.display='none';
+    openModal('newPromptModal');
+  }catch(e){toast('Load failed: '+e.message,'error');}
+}
+
+async function savePrompt(){
+  const title=document.getElementById('pTitle').value.trim();
+  if(!title){toast('Title is required','error');return;}
+  try{
+    if(editingPromptId){
+      await http('PUT','/prompts/'+editingPromptId,{
+        title,description:document.getElementById('pDesc').value.trim(),
+        category:document.getElementById('pCategory').value,
+        model:document.getElementById('pModel').value,
+        tags:document.getElementById('pTags').value.split(',').map(t=>t.trim()).filter(Boolean)
+      });
+      toast('Prompt updated!','success');
+    }else{
+      const content=document.getElementById('pContent').value.trim();
+      if(!content){toast('Content is required','error');return;}
+      await http('POST','/prompts/',{
+        title,description:document.getElementById('pDesc').value.trim(),
+        category:document.getElementById('pCategory').value,
+        model:document.getElementById('pModel').value,
+        tags:document.getElementById('pTags').value.split(',').map(t=>t.trim()).filter(Boolean),
+        initial_content:content,
+        commit_message:document.getElementById('pCommit').value.trim()||'Initial version'
+      });
+      toast('Prompt created! 🎉','success');
+    }
+    closeModal('newPromptModal');
+    loadPrompts();
+  }catch(e){toast('Save failed: '+e.message,'error');}
+}
+
+function openNewVersionModal(promptId){
+  populatePromptSelects();
+  if(promptId)setTimeout(()=>{document.getElementById('vModalPromptSel').value=promptId},100);
+  document.getElementById('vContent').value='';
+  document.getElementById('vCommit').value='';
+  openModal('newVersionModal');
+}
+
+async function saveVersion(){
+  const pid=document.getElementById('vModalPromptSel').value;
+  const content=document.getElementById('vContent').value.trim();
+  const commit=document.getElementById('vCommit').value.trim();
+  if(!pid){toast('Select a prompt','error');return;}
+  if(!content){toast('Content is required','error');return;}
+  try{
+    const v=await http('POST','/versions/'+pid,{content,commit_message:commit||'New version'});
+    toast(`Version v${v.version_number} committed! Quality: ${pct(v.quality_score||0)} 🚀`,'success');
+    closeModal('newVersionModal');
+    if(document.getElementById('page-history').classList.contains('active'))loadVersionsFor(pid);
+  }catch(e){toast('Commit failed: '+e.message,'error');}
+}
+
+async function populatePromptSelects(){
+  try{
+    const prompts=await http('GET','/prompts/');
+    allPrompts=prompts;
+    const opts=prompts.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('');
+    ['sugPromptSel','cmpPromptSel','vModalPromptSel'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){const cur=el.value;el.innerHTML=opts;if(cur)el.value=cur;}
+    });
+    document.getElementById('navPromptCount').textContent=prompts.length;
+  }catch{}
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}));
+
+
+// UTILS
+
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function pct(v){return Math.round(v*100)+'%';}
+function fmtDate(iso){return iso?new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';}
+function relTime(iso){
+  if(!iso)return'';const diff=(Date.now()-new Date(iso))/1000;
+  if(diff<60)return'just now';if(diff<3600)return Math.floor(diff/60)+'m ago';
+  if(diff<86400)return Math.floor(diff/3600)+'h ago';return Math.floor(diff/86400)+'d ago';
+}
+function sentimentIcon(s){return{positive:'😊',cautionary:'⚠️',neutral:'😐'}[s]||'😐';}
+
+
+// INIT
+
+navigateTo('dashboard');
+populatePromptSelects();
+</script>
+</body>
+</html>

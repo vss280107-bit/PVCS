@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  background: #333;
+  justify-content: center;
+}
+
+.navbar a {
+  color: white;
+  padding: 14px 20px;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+/* Hover Effect */
+.navbar a:hover {
+  background: #575757;
+}
+
+/* Active Link */
+.navbar a.active {
+  background: #04AA6D;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .navbar {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+  <a href="#" class="active">Home</a>
+  <a href="#">About</a>
+  <a href="#">Services</a>
+  <a href="#">Contact</a>
+</div>
+
+</body>
+</html>

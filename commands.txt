@@ -1,0 +1,15 @@
+source .venv/bin/activate
+
+backend start
+cd backend
+
+uvicorn main:app --reload
+
+stop server
+ctrl+c
+
+frontend start
+python3 -m http.server 3000
+
+frontend url
+http://127.0.0.1:3000/frontend/index.html
